@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+set -e
+
+JSON_FILE="snippets.json"
+OUTPUT_DIR="./snippets"
+
+mkdir -p "$OUTPUT_DIR"
+
+name_file() {
+    local snippet_name="$1"
+    local extension="$2"
+    local path_prefix="$3"
+
+    local dupes=1
+    local candidate="${OUTPUT_DIR}/${path_prefix}${snippet_name}${extension}"
+
+    while [ -f "$candidate" ]; do
+        echo "exists!"
+        candidate="${OUTPUT_DIR}/${path_prefix}${snippet_name}-${dupes}${extension}"
+        dupes=$((dupes + 1))
+    done
+
+    echo "$candidate"
+}
+
+jq -c '.[]' "$JSON_FILE" | while read -r snippet; do
+
+    [ "$snippet" = "null" ] && continue
+
+    platform="TAW"
+    platform_path="shared/corp-"
+
+    shared=$(echo "$snippet" | jq -r '.shared // false')
+    shared_with_length=$(echo "$snippet" | jq '.shared_with // [] | length')
+
+    if [ "$shared" != "true" ] || [ "$shared_with_length" -lt 2 ]; then
+        platform_path="taw/corp-taw-"
+    fi
+
+    path_prefix=$(echo "$platform_path" | tr '[:upper:]' '[:lower:]')
+
+    name=$(echo "$snippet" | jq -r '.name // ""')
+    description=$(echo "$snippet" | jq -r '.description // ""')
+    created_by=$(echo "$snippet" | jq -r '.created_by // ""')
+    id=$(echo "$snippet" | jq -r '.id // ""')
+    created_at=$(echo "$snippet" | jq -r '.created_at // ""')
+    updated_at=$(echo "$snippet" | jq -r '.updated_at // ""')
+    html=$(echo "$snippet" | jq -r '.content.html // ""')
+
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    comment="{%- comment -%}"
+
+    if [ -n "$description" ]; then
+        comment="${comment}
+        Description: ${name}
+        ${description}"
+    fi
+
+    comment="${comment}
+    Created By: ${created_by}
+    Retrieved From: ${platform}
+    Zeta Link: https://app.zetaglobal.net/snippets/${id}
+    Id: ${id}
+    Retrieved At: ${timestamp}
+    Created At: ${created_at}
+    Last Zeta Update: ${updated_at}
+{%- endcomment -%}"
+
+    case "$name" in
+        *Css*)
+            extension=".css.liquid"
+            ;;
+        *)
+            extension=".liquid"
+            ;;
+    esac
+
+    file_name="${OUTPUT_DIR}/${path_prefix}${name}${extension}"
+
+    if [ -f "$file_name" ]; then
+        file_name=$(name_file "$name" "$extension" "$path_prefix")
+    fi
+
+    mkdir -p "$(dirname "$file_name")"
+
+    {
+        printf '%s\n' "$comment"
+        printf '%s\n' "$html"
+    } > "$file_name"
+
+    echo "Saved: $file_name"
+done
