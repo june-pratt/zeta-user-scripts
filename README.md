@@ -2,7 +2,7 @@
 This repo contains a few userscripts to make development on Zeta a bit easier
 
 ## downloadAllSnippets
-IMPORTANT: It's recommended to leave this snippet off unless you're actively using it because it may disable a few buttons. This adds a button to the snippets page that will download all snippets in an instance as json.
+IMPORTANT: It's recommended to leave this script off unless you're actively using it because it may disable a few buttons. This adds a button to the snippets page that will download all snippets in an instance as json.
 ### Processing snippets for bitbucket
 Use the bash script save_snippets to process and sort these snippets. Note: you will need jq and bash 3.2+.
 
